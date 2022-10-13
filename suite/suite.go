@@ -94,9 +94,9 @@ func (suite *Suite) Run(name string, subtest func()) bool {
 
 // Run takes a testing suite and runs all of the tests attached
 // to it.
-func Run(t *testing.T, suite TestingSuite) {
+func Run(t *testing.T, suite TestingSuite, skipCases []string) {
 	defer recoverAndFailOnPanic(t)
-
+	tagFinder := reflect.TypeOf(&suite)
 	suite.SetT(t)
 
 	var suiteSetupDone bool
@@ -108,6 +108,7 @@ func Run(t *testing.T, suite TestingSuite) {
 
 	tests := []testing.InternalTest{}
 	methodFinder := reflect.TypeOf(suite)
+
 	suiteName := methodFinder.Elem().Name()
 
 	for i := 0; i < methodFinder.NumMethod(); i++ {
@@ -138,6 +139,10 @@ func Run(t *testing.T, suite TestingSuite) {
 		test := testing.InternalTest{
 			Name: method.Name,
 			F: func(t *testing.T) {
+				if filterSkipCase(skipCases, method.Name) {
+					t.Skipf("Skip this case by Skip Tag")
+					return
+				}
 				parentT := suite.T()
 				suite.SetT(t)
 				defer recoverAndFailOnPanic(t)
@@ -191,6 +196,15 @@ func Run(t *testing.T, suite TestingSuite) {
 	}
 
 	runTests(t, tests)
+}
+
+func filterSkipCase(skipCases []string, methodName string) bool {
+	for i := 0; i < len(skipCases); i++ {
+		if skipCases[i] == methodName {
+			return true
+		}
+	}
+	return false
 }
 
 // Filtering method according to set regular expression
