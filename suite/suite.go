@@ -96,7 +96,6 @@ func (suite *Suite) Run(name string, subtest func()) bool {
 // to it.
 func Run(t *testing.T, suite TestingSuite, skipCases []string) {
 	defer recoverAndFailOnPanic(t)
-	tagFinder := reflect.TypeOf(&suite)
 	suite.SetT(t)
 
 	var suiteSetupDone bool
@@ -141,7 +140,7 @@ func Run(t *testing.T, suite TestingSuite, skipCases []string) {
 			F: func(t *testing.T) {
 				if filterSkipCase(skipCases, method.Name) {
 					t.Skipf("Skip this case by Skip Tag")
-					return
+
 				}
 				parentT := suite.T()
 				suite.SetT(t)
