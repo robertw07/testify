@@ -94,7 +94,7 @@ func (suite *Suite) Run(name string, subtest func()) bool {
 
 // Run takes a testing suite and runs all of the tests attached
 // to it.
-func Run(t *testing.T, suite TestingSuite, skipCases []string) {
+func Run(t *testing.T, suite TestingSuite, skipCases []string, caseInfos []CaseInfo) {
 	defer recoverAndFailOnPanic(t)
 	suite.SetT(t)
 
@@ -176,6 +176,13 @@ func Run(t *testing.T, suite TestingSuite, skipCases []string) {
 					stats.start(method.Name)
 				}
 
+				//// test feature extension
+				//if checkHasCaseInfo(caseInfos, method.Name) {
+				//	//TODO  from robert
+				//	//.....
+				//	method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf("***")})
+				//}
+
 				method.Func.Call([]reflect.Value{reflect.ValueOf(suite)})
 			},
 		}
@@ -195,6 +202,11 @@ func Run(t *testing.T, suite TestingSuite, skipCases []string) {
 	}
 
 	runTests(t, tests)
+}
+
+func checkHasCaseInfo(caseInfos []CaseInfo, methodName string) bool {
+
+	return false
 }
 
 func filterSkipCase(skipCases []string, methodName string) bool {
