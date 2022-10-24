@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>go-test-report</title>
+    <style type="text/css">
+        body {
+            font-family: sans-serif;
+            background-color: #f3f3f3;
+            border-top: 2px #dee6e8 solid;
+            margin: 0;
+        }
+
+        div.pageHeader span.projectTitle {
+            font-family: serif;
+            font-size: 2em;
+            padding-left: 56px;
+            padding-top: 80px;
+            display: block;
+            color: #a5a5a5;
+            text-shadow: 0 -1px 1px white;
+        }
+
+        div.pageHeader div.testStats {
+            position: absolute;
+            top: 7px;
+            right: 52px;
+            font-size: 0.8em;
+            color: #a2a2a2;
+        }
+
+        div.pageHeader div.testStats span.indicator {
+            font-size: 2em;
+            position: relative;
+            top: 5px;
+            text-shadow: 0 1px 0 white;
+        }
+
+        div.pageHeader div.testStats span strong {
+            margin-right: 16px;
+        }
+
+        div.pageHeader div.testStats span.total {
+            border-right: 1px #afafaf dotted;
+            background: #8298af;
+        }
+
+        div.pageHeader div.testStats span.passed {
+            border-right: 1px #afafaf dotted;
+            background: #6fca83;
+        }
+
+        div.pageHeader div.testStats span.skipped {
+            background: #bababa;
+        }
+
+        div.pageHeader div.testStats span.failed {
+            background: #ff7676;
+        }
+
+        div.pageHeader div.testStats span {
+            margin-right: 1px;
+            height: 55px;
+            padding: 20px 8px 18px;
+            color: white;
+        }
+
+        div.pageHeader .testGroupsTitle {
+            margin: 16px 32px 8px 40px;
+            font-size: 0.9em;
+            color: darkgrey;
+            display: inline-block;
+        }
+
+        div.pageHeader .testExecutionDate {
+            display: inline-block;
+            position: absolute;
+            right: 10px;
+            margin: 14px 32px 8px 40px;
+            color: #9e9e9e;
+            font-size: 0.9em;
+        }
+
+        .testReportContainer {
+            padding: 0 32px 32px 32px;
+        }
+
+        .cardContainer {
+            padding: 16px 16px 16px;
+            box-shadow: 0 4px 4px #d4d4d4;
+            background-color: white;
+        }
+
+        #testResults {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .testResultGroup {
+            width: 24px;
+            height: 24px;
+            background-color: #43c143;
+            margin-left: 1px;
+            margin-bottom: 1px;
+            box-sizing: border-box;
+        }
+
+        .testResultGroup.selected {
+            border: 1px white solid;
+            background-color: black !important;
+        }
+
+        .testResultGroup.skipped {
+            border: 2px gray solid;
+        }
+
+        .testResultGroup.failed {
+            background-color: red;
+        }
+
+        .cardContainer.testGroupList,
+        .cardContainer.testDetail {
+            margin-top: 16px;
+            padding: 16px;
+        }
+
+        .cardContainer.testGroupList {
+            color: #9c9c9c;
+            padding: 0;
+        }
+
+        .cardContainer.testGroupList .testGroupRow {
+            cursor: default;
+            border-bottom: 1px #dadada dotted;
+        }
+
+        .cardContainer.testGroupList .testGroupRow span.testStatus {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #139e13;
+            pointer-events: none;
+            display: inline-block;
+            overflow: hidden;
+            float: left;
+            padding-top: 10px;
+            padding-left: 20px;
+            padding-right: 12px;
+        }
+
+        .cardContainer.testGroupList .testGroupRow span.testStatus.skipped {
+            color: gray;
+        }
+
+        .cardContainer.testGroupList .testGroupRow span.testStatus.failed {
+            color: red;
+        }
+
+        .cardContainer.testGroupList .testGroupRow span.testTitle {
+            font-size: 0.9em;
+            padding: 12px 0 10px;
+            display: inline-block;
+            pointer-events: none;
+            color: #525252;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            width: calc(100% - 110px);
+        }
+
+        .cardContainer.testGroupList .testGroupRow span.testDuration {
+            pointer-events: none;
+        }
+
+        .cardContainer.testGroupList .testGroupRow {
+            position: relative;
+            border-left: 4px #43c143 solid;
+        }
+
+        .cardContainer.testGroupList .testGroupRow.skipped {
+            color: gray;
+            border-left: 4px gray solid;
+        }
+
+        .cardContainer.testGroupList .testGroupRow.failed {
+            color: red;
+            border-left: 4px red solid;
+        }
+
+        .cardContainer.testGroupList .testGroupRow:hover {
+            background-color: #fffaea;
+            transition: 0.250s;
+        }
+
+        .cardContainer .testOutput {
+            padding: 8px 16px 24px 16px;
+        }
+
+        .cardContainer .console {
+            display: block;
+            font-family: monospace;
+            padding: 10px;
+            background-color: #424242;
+            color: #1aff00;
+            border-bottom: 1px #1aff00 dotted;
+            overflow: auto;
+            font-size: 1.1em;
+        }
+
+        .cardContainer .testOutput .testDetail {
+            border-bottom: 1px #d0d0d0 solid;
+            padding: 16px;
+            background-color: #e6e6e6;
+            border-radius: 0 0 4px 4px;
+            color: dimgrey;
+            font-size: 0.8em;
+        }
+
+        .cardContainer .console.skipped{
+            color: #d9d9d9;
+        }
+
+        .cardContainer .console.failed {
+            color: #ffb2b2;
+        }
+
+        .cardContainer .testDuration {
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            text-align: right;
+            padding-right: 8px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+<div class="pageHeader">
+    <span class="projectTitle">go-test-report</span>
+    <div class="testStats">
+        <span class="total"><span class="indicator">&boxbox;</span> Total: <strong>87</strong>Duration: <strong>13.257s</strong>
+        </span><span class="passed"><span class="indicator">&check;</span> Passed: <strong>86</strong>
+        </span><span class="skipped"><span class="indicator">&dash;</span> Skipped: <strong>1</strong>
+        </span><span class="failed"><span class="indicator">&cross;</span> Failed: <strong>0</strong>
+        </span>
+    </div>
+    <span class="testGroupsTitle">Test Groups:</span>
+    <span class="testExecutionDate">October 24, 2022 13:35:37</span>
+</div>
+<div class="testReportContainer">
+    <div class="cardContainer">
+        <div id="testResults">
+            
+                <div class="testResultGroup  skipped" id="0"></div>
+            
+                <div class="testResultGroup  " id="1"></div>
+            
+                <div class="testResultGroup  " id="2"></div>
+            
+                <div class="testResultGroup  " id="3"></div>
+            
+                <div class="testResultGroup  " id="4"></div>
+            
+        </div>
+    </div>
+    <div class="cardContainer testGroupList" id="testGroupList"></div>
+</div>
+<script type="application/javascript">
+    /**
+ * @typedef TestStatus
+ * @property {string} TestName
+ * @property {string} Package
+ * @property {number} ElapsedTime
+ * @property {Array.<string>} Output
+ * @property {boolean} Passed
+ * @property {boolean} Skipped
+ */
+class TestStatus {}
+
+/**
+ * @typedef TestGroupData
+ * @type {object}
+ * @property {string} FailureIndicator
+ * @property {string} SkippedIndicator
+ * @property {Array.<TestStatus>}
+ */
+class TestGroupData {}
+
+/**
+ * @typedef TestResults
+ * @type {Array.<TestGroupData>}
+ */
+class TestResults extends Array {}
+
+/**
+ * @typedef SelectedItems
+ * @property {HTMLElement|EventTarget} testResults
+ * @property {String} selectedTestGroupColor
+ */
+class SelectedItems {}
+
+/**
+ * @typedef GoTestReportElements
+ * @property {TestResults} data
+ * @property {HTMLElement} testResultsElem
+ * @property {HTMLElement} testGroupListElem
+ */
+class GoTestReportElements {}
+
+
+/**
+ * Main entry point for GoTestReport.
+ * @param {GoTestReportElements} elements
+ * @returns {{testResultsClickHandler: testResultsClickHandler}}
+ * @constructor
+ */
+window.GoTestReport = function (elements) {
+  const /**@type {SelectedItems}*/ selectedItems = {
+    testResults: null,
+    selectedTestGroupColor: null
+  }
+
+  function addEventData(event) {
+    if (event.data == null) {
+      event.data = {target: event.target}
+    }
+    return event
+  }
+
+
+  const goTestReport = {
+    /**
+     * Invoked when a user clicks on one of the test group div elements.
+     * @param {HTMLElement} target The element associated with the test group.
+     * @param {boolean} shiftKey If pressed, all of test detail associated to the test group is shown.
+     * @param {TestResults} data
+     * @param {SelectedItems} selectedItems
+     * @param {function(target: Element, data: TestResults)} testGroupListHandler
+     */
+    testResultsClickHandler: function (target,
+                                       shiftKey,
+                                       data,
+                                       selectedItems,
+                                       testGroupListHandler) {
+
+      if (target.classList.contains('testResultGroup') === false) {
+        return
+      }
+      if (selectedItems.testResults != null) {
+        let testResultsElement = /**@type {HTMLElement}*/ selectedItems.testResults
+        testResultsElement.classList.remove("selected")
+        testResultsElement.style.backgroundColor = selectedItems.selectedTestGroupColor
+      }
+      const testGroupId = /**@type {number}*/ target.id
+      if ((target.id === undefined)
+        || (data[testGroupId] === undefined)
+        || (data[testGroupId]['TestResults'] === undefined)) {
+        return
+      }
+      const testResults = /**@type {TestResults}*/ data[testGroupId]['TestResults']
+      let testGroupList = /**@type {string}*/ ''
+      selectedItems.selectedTestGroupColor = getComputedStyle(target).getPropertyValue('background-color')
+      selectedItems.testResults = target
+      target.classList.add("selected")
+      for (let i = 0; i < testResults.length; i++) {
+        const testResult = /**@type {TestGroupData}*/ testResults[i]
+        const testPassed = /**@type {boolean}*/ testResult.Passed
+        const testSkipped = /**@type {boolean}*/ testResult.Skipped
+        const testPassedStatus = /**@type {string}*/ (testPassed) ? '' : (testSkipped ? 'skipped' : 'failed')
+        const testId = /**@type {string}*/ target.attributes['id'].value
+        testGroupList += `<div class="testGroupRow ${testPassedStatus}" data-groupid="${testId}" data-index="${i}">
+        <span class="testStatus ${testPassedStatus}">${(testPassed) ? '&check' : (testSkipped ? '&dash' : '&cross')};</span>
+        <span class="testTitle">${testResult.TestName}</span>
+        <span class="testDuration"><span>${testResult.ElapsedTime}s </span>⏱</span>
+      </div>`
+      }
+      const testGroupListElem = elements.testGroupListElem
+      testGroupListElem.innerHTML = ''
+      testGroupListElem.innerHTML = testGroupList
+
+      if (shiftKey) {
+        testGroupListElem.querySelectorAll('.testGroupRow')
+                         .forEach((elem) => testGroupListHandler(elem, data))
+      } else if (testResults.length === 1) {
+        testGroupListHandler(testGroupListElem.querySelector('.testGroupRow'), data)
+      }
+    },
+
+    /**
+     *
+     * @param {Element} target
+     * @param {TestResults} data
+     */
+    testGroupListHandler: function (target, data) {
+      const attribs = target['attributes']
+      if (attribs.hasOwnProperty('data-groupid')) {
+        const groupId = /**@type {number}*/ attribs['data-groupid'].value
+        const testIndex = /**@type {number}*/ attribs['data-index'].value
+        const testStatus = /**@type {TestStatus}*/ data[groupId]['TestResults'][testIndex]
+        const testOutputDiv = /**@type {HTMLDivElement}*/ target.querySelector('div.testOutput')
+
+        if (testOutputDiv == null) {
+          const testOutputDiv = document.createElement('div')
+          testOutputDiv.classList.add('testOutput')
+          const consolePre = document.createElement('pre')
+          consolePre.classList.add('console')
+          const testDetailDiv = document.createElement('div')
+          testDetailDiv.classList.add('testDetail')
+          const packageNameDiv = document.createElement('div')
+          packageNameDiv.classList.add('package')
+          packageNameDiv.innerHTML = `<strong>Package:</strong> ${testStatus.Package}`
+          const testFileNameDiv = document.createElement('div')
+          testFileNameDiv.classList.add('filename')
+          if (testStatus.TestFileName.trim() === "") {
+            testFileNameDiv.innerHTML = `<strong>Filename:</strong> n/a &nbsp;&nbsp;`
+          } else {
+            testFileNameDiv.innerHTML = `<strong>Filename:</strong> ${testStatus.TestFileName} &nbsp;&nbsp;`
+            testFileNameDiv.innerHTML += `<strong>Line:</strong> ${testStatus.TestFunctionDetail.Line} `
+            testFileNameDiv.innerHTML += `<strong>Col:</strong> ${testStatus.TestFunctionDetail.Col}`
+          }
+          testDetailDiv.insertAdjacentElement('beforeend', packageNameDiv)
+          testDetailDiv.insertAdjacentElement('beforeend', testFileNameDiv)
+          testOutputDiv.insertAdjacentElement('afterbegin', consolePre)
+          testOutputDiv.insertAdjacentElement('beforeend', testDetailDiv)
+          target.insertAdjacentElement('beforeend', testOutputDiv)
+
+          if (testStatus.Passed) {
+            consolePre.classList.remove('skipped')
+            consolePre.classList.remove('failed')
+          } else if (testStatus.Skipped) {
+            consolePre.classList.add('skipped')
+            consolePre.classList.remove('failed')
+          } else {
+            consolePre.classList.remove('skipped')
+            consolePre.classList.add('failed')
+          }
+          consolePre.textContent = testStatus.Output.join('')
+        } else {
+          testOutputDiv.remove()
+        }
+      }
+    }
+  }
+
+  //+------------------------+
+  //|    setup DOM events    |
+  //+------------------------+
+  elements.testResultsElem
+          .addEventListener('click', event =>
+            goTestReport.testResultsClickHandler(/**@type {HTMLElement}*/ addEventData(event).data.target,
+                                                 event.shiftKey,
+                                                 elements.data,
+                                                 selectedItems,
+                                                 goTestReport.testGroupListHandler))
+
+  elements.testGroupListElem
+          .addEventListener('click', event =>
+            goTestReport.testGroupListHandler(/**@type {Element}*/ event.target,
+                                              elements.data))
+
+  return goTestReport
+}
+
+
+    
+
+    const data = [{"FailureIndicator":"","SkippedIndicator":"skipped","TestResults":[{"TestName":"TestDemo","Package":"github.com/stretchr/testify/tests","ElapsedTime":12.01,"Output":["","=== RUN   TestDemo\n","map[EthTop200:[12113241234123 abcasdfasdfasd 13241234123412 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 12113241234123 abcasdfasdfasd 13241234123412 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777","777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333] EthTop500:[************ 777777777777 122333333333]]\n","map[EthTop200:[12113241234123 abcasdfasdfasd 13241234123412 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 12113241234123 abcasdfasdfasd 13241234123412 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333 ************ 777777777","777 122333333333 ************ 777777777777 122333333333 ************ 777777777777 122333333333] EthTop500:[************ 777777777777 122333333333]]\n","--- PASS: TestDemo (12.01s)",""],"Passed":true,"Skipped":false,"TestFileName":"demo_test.go","TestFunctionDetail":{"Line":14,"Col":1}},{"TestName":"TestDemo/Test_0","Package":"github.com/stretchr/testify/tests","ElapsedTime":0,"Output":["","=== RUN   TestDemo/Test_0\n","    suite.go:193: Current test method Tags:\n","    --- SKIP: TestDemo/Test_0 (0.00s)\n",""],"Passed":false,"Skipped":true,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1","Package":"github.com/stretchr/testify/tests","ElapsedTime":12.01,"Output":["","=== RUN   TestDemo/Test_1\n","","=== CONT  TestDemo/Test_1\n","    suite.go:234: Total data case count: 84\n","    suite.go:235: Failed data case count: 0\n","    suite.go:236: Success rate:  100 %\n","    suite.go:237: Parallel count: 26\n","--- PASS: TestDemo/Test_1 (12.01s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_0","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_0\n","","=== CONT  TestDemo/Test_1/EthTop200_0\n","    demo_test.go:132: ~~~~: 12113241234123\n","--- PASS: TestDemo/Test_1/EthTop200_0 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_1","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_1\n","","=== CONT  TestDemo/Test_1/EthTop200_1\n","    demo_test.go:132: ~~~~: abcasdfasdfasd\n","--- PASS: TestDemo/Test_1/EthTop200_1 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_10","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_10\n","","=== CONT  TestDemo/Test_1/EthTop200_10\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_10 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_11","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_11\n","","=== CONT  TestDemo/Test_1/EthTop200_11\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_11 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_12","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_12\n","","=== CONT  TestDemo/Test_1/EthTop200_12\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_12 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_13","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_13\n","","=== CONT  TestDemo/Test_1/EthTop200_13\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_13 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_14","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_14\n","","=== CONT  TestDemo/Test_1/EthTop200_14\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_14 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_15","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_15\n","","=== CONT  TestDemo/Test_1/EthTop200_15\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_15 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_16","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_16\n","","=== CONT  TestDemo/Test_1/EthTop200_16\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_16 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_17","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_17\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_17 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_18","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_18\n","","=== CONT  TestDemo/Test_1/EthTop200_18\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_18 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_19","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_19\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_19 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_2","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_2\n","    demo_test.go:132: ~~~~: 13241234123412\n","--- PASS: TestDemo/Test_1/EthTop200_2 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_20","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_20\n","","=== CONT  TestDemo/Test_1/EthTop200_20\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_20 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_21","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_21\n","","=== CONT  TestDemo/Test_1/EthTop200_21\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_21 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_22","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_22\n","","=== CONT  TestDemo/Test_1/EthTop200_22\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_22 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_23","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_23\n","","=== CONT  TestDemo/Test_1/EthTop200_23\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_23 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}}]},{"FailureIndicator":"","SkippedIndicator":"","TestResults":[{"TestName":"TestDemo/Test_1/EthTop200_24","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_24\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_24 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_25","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_25\n","","=== CONT  TestDemo/Test_1/EthTop200_25\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_25 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_26","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_26\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_26 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_27","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_27\n","","=== CONT  TestDemo/Test_1/EthTop200_27\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_27 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_28","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_28\n","","=== CONT  TestDemo/Test_1/EthTop200_28\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_28 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_29","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_29\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_29 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_3","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_3\n","","=== CONT  TestDemo/Test_1/EthTop200_3\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_3 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_30","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_30\n","","=== CONT  TestDemo/Test_1/EthTop200_30\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_30 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_31","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_31\n","","=== CONT  TestDemo/Test_1/EthTop200_31\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_31 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_32","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_32\n","","=== CONT  TestDemo/Test_1/EthTop200_32\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_32 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_33","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_33\n","","=== CONT  TestDemo/Test_1/EthTop200_33\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_33 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_34","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_34\n","","=== CONT  TestDemo/Test_1/EthTop200_34\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_34 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_35","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_35\n","","=== CONT  TestDemo/Test_1/EthTop200_35\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_35 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_36","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_36\n","","=== CONT  TestDemo/Test_1/EthTop200_36\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_36 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_37","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_37\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_37 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_38","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_38\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_38 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_39","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_39\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_39 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_4","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_4\n","","=== CONT  TestDemo/Test_1/EthTop200_4\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_4 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_40","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_40\n","","=== CONT  TestDemo/Test_1/EthTop200_40\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_40 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_41","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_41\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_41 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}}]},{"FailureIndicator":"","SkippedIndicator":"","TestResults":[{"TestName":"TestDemo/Test_1/EthTop200_42","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_42\n","    demo_test.go:132: ~~~~: 12113241234123\n","--- PASS: TestDemo/Test_1/EthTop200_42 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_43","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_43\n","    demo_test.go:132: ~~~~: abcasdfasdfasd\n","--- PASS: TestDemo/Test_1/EthTop200_43 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_44","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_44\n","    demo_test.go:132: ~~~~: 13241234123412\n","--- PASS: TestDemo/Test_1/EthTop200_44 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_45","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_45\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_45 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_46","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_46\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_46 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_47","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_47\n","","=== CONT  TestDemo/Test_1/EthTop200_47\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_47 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_48","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_48\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_48 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_49","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_49\n","","=== CONT  TestDemo/Test_1/EthTop200_49\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_49 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_5","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_5\n","","=== CONT  TestDemo/Test_1/EthTop200_5\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_5 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_50","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_50\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_50 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_51","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_51\n","","=== CONT  TestDemo/Test_1/EthTop200_51\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_51 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_52","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_52\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_52 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_53","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_53\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_53 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_54","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_54\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_54 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_55","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_55\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_55 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_56","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_56\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_56 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_57","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_57\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_57 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_58","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_58\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_58 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_59","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_59\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_59 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_6","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_6\n","","=== CONT  TestDemo/Test_1/EthTop200_6\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_6 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}}]},{"FailureIndicator":"","SkippedIndicator":"","TestResults":[{"TestName":"TestDemo/Test_1/EthTop200_60","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_60\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_60 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_61","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_61\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_61 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_62","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_62\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_62 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_63","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_63\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_63 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_64","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_64\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_64 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_65","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_65\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_65 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_66","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_66\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_66 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_67","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_67\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_67 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_68","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_68\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_68 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_69","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_69\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_69 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_7","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_7\n","","=== CONT  TestDemo/Test_1/EthTop200_7\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_7 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_70","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_70\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_70 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_71","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_71\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_71 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_72","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_72\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_72 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_73","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_73\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_73 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_74","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_74\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_74 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_75","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_75\n","","=== CONT  TestDemo/Test_1/EthTop200_75\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_75 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_76","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_76\n","","=== CONT  TestDemo/Test_1/EthTop200_76\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_76 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_77","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_77\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_77 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_78","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_78\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_78 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}}]},{"FailureIndicator":"","SkippedIndicator":"","TestResults":[{"TestName":"TestDemo/Test_1/EthTop200_79","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_79\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_79 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_8","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_8\n","","=== CONT  TestDemo/Test_1/EthTop200_8\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_8 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_80","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_80\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_80 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_81","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_81\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_81 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_82","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_82\n","","=== CONT  TestDemo/Test_1/EthTop200_82\n","    demo_test.go:132: ~~~~: 777777777777\n","--- PASS: TestDemo/Test_1/EthTop200_82 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_83","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_83\n","","=== CONT  TestDemo/Test_1/EthTop200_83\n","    demo_test.go:132: ~~~~: 122333333333\n","--- PASS: TestDemo/Test_1/EthTop200_83 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}},{"TestName":"TestDemo/Test_1/EthTop200_9","Package":"github.com/stretchr/testify/tests","ElapsedTime":3,"Output":["","=== RUN   TestDemo/Test_1/EthTop200_9\n","","=== CONT  TestDemo/Test_1/EthTop200_9\n","    demo_test.go:132: ~~~~: ************\n","--- PASS: TestDemo/Test_1/EthTop200_9 (3.00s)",""],"Passed":true,"Skipped":false,"TestFileName":"","TestFunctionDetail":{"Line":0,"Col":0}}]}]
+
+    const report = window.GoTestReport({
+                                         data: data,
+                                         testResultsElem: document.getElementById('testResults'),
+                                         testGroupListElem: document.getElementById('testGroupList')
+                                       });
+
+
+</script>
+</body>
+</html>

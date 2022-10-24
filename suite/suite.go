@@ -94,7 +94,7 @@ func (suite *Suite) Run(name string, subtest func()) bool {
 
 // Run takes a testing suite and runs all of the tests attached
 // to it.
-func Run(t *testing.T, suite TestingSuite, skipCases []string, caseInfos []CaseInfo) {
+func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 	defer recoverAndFailOnPanic(t)
 	suite.SetT(t)
 
@@ -135,13 +135,22 @@ func Run(t *testing.T, suite TestingSuite, skipCases []string, caseInfos []CaseI
 			suiteSetupDone = true
 		}
 
-		test := testing.InternalTest{
-			Name: method.Name,
-			F: func(t *testing.T) {
-				if filterSkipCase(skipCases, method.Name) {
-					t.Skipf("Skip this case by Skip Tag")
+		filedFinder := reflect.ValueOf(suite)
 
-				}
+		// Add by Robert for extend test features
+		dataField := filedFinder.Elem().FieldByName("TestData")
+		fmt.Println(dataField)
+		testData := map[string][]string{}
+		if dataField != (reflect.Value{}) {
+			mapIter := dataField.MapRange()
+			for mapIter.Next() {
+				testData[mapIter.Key().Interface().(string)] = mapIter.Value().Interface().([]string)
+			}
+		}
+
+		test := testing.InternalTest{
+			method.Name,
+			func(t *testing.T) {
 				parentT := suite.T()
 				suite.SetT(t)
 				defer recoverAndFailOnPanic(t)
@@ -176,14 +185,60 @@ func Run(t *testing.T, suite TestingSuite, skipCases []string, caseInfos []CaseI
 					stats.start(method.Name)
 				}
 
-				//// test feature extension
-				//if checkHasCaseInfo(caseInfos, method.Name) {
-				//	//TODO  from robert
-				//	//.....
-				//	method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf("***")})
-				//}
+				// Add by Robert for extend test features
+				// test feature extension
+				curCaseInfo := getCaseInfo(caseInfos, method.Name)
+				if curCaseInfo != nil {
+					if curCaseInfo.IsSkip {
+						t.Skipf("Current test method Tags:%s", curCaseInfo.TagStr)
+					}
+					// Concurrent execution of data-driven testing cases
+					if curCaseInfo.DataKey != "" {
+						targetDataArray := testData[curCaseInfo.DataKey]
+						parallelCount := curCaseInfo.ParallelCount
+						var wg sync.WaitGroup
+						if parallelCount == 0 {
+							parallelCount = 1
+						}
+						//pool := tunny.NewFunc(parallelCount, func(i interface{}) interface{} {
+						//	t.Run(fmt.Sprintf("%s_%d", curCaseInfo.DataKey, i), func(t *testing.T) {
+						//		method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf(targetDataArray[i.(int)])})
+						//	})
+						//	return nil
+						//})
+						//for i := 0; i < len(targetDataArray); i++ {
+						//	go pool.Process(i)
+						//}
+						//defer pool.Close()
+						failCount := 0
+						ch := make(chan struct{}, parallelCount)
+						for i := 0; i < len(targetDataArray); i++ {
+							curData := targetDataArray[i]
+							ch <- struct{}{}
+							wg.Add(1)
+							caseName := fmt.Sprintf("%s_%d", curCaseInfo.DataKey, i)
+							go func(caseNameStr, data string) {
+								t.Run(caseNameStr, func(tt *testing.T) {
+									defer wg.Done()
+									method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf(data), reflect.ValueOf(tt)})
+									if tt.Failed() {
+										failCount++
+									}
+									<-ch
+								})
+							}(caseName, curData)
+						}
+						wg.Wait()
 
-				method.Func.Call([]reflect.Value{reflect.ValueOf(suite)})
+						failureRate := (len(targetDataArray) - failCount) / len(targetDataArray) * 100
+						t.Logf("Total data case count: %d", len(targetDataArray))
+						t.Logf("Failed data case count: %d", failCount)
+						t.Log("Success rate: ", failureRate, "%")
+						t.Logf("Parallel count: %d", parallelCount)
+					}
+				} else {
+					method.Func.Call([]reflect.Value{reflect.ValueOf(suite)})
+				}
 			},
 		}
 		tests = append(tests, test)
@@ -204,9 +259,13 @@ func Run(t *testing.T, suite TestingSuite, skipCases []string, caseInfos []CaseI
 	runTests(t, tests)
 }
 
-func checkHasCaseInfo(caseInfos []CaseInfo, methodName string) bool {
-
-	return false
+func getCaseInfo(caseInfos []CaseInfo, methodName string) *CaseInfo {
+	for _, caseInfo := range caseInfos {
+		if caseInfo.MethodName == methodName {
+			return &caseInfo
+		}
+	}
+	return nil
 }
 
 func filterSkipCase(skipCases []string, methodName string) bool {
