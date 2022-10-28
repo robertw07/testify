@@ -1,9 +1,9 @@
 package tests
 
 import (
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"testing"
-	"time"
 )
 
 type DemoSuiteTest struct {
@@ -130,6 +130,9 @@ func (t *DemoSuiteTest) Test_0() {
 
 func (t *DemoSuiteTest) Test_1(data string, tt *testing.T) {
 	tt.Log("~~~~:", data)
+	if data == "777777777777" {
+		assert.True(tt, false, "")
+	}
 	//assert.True(tt, false, data)
-	time.Sleep(time.Second * 3)
+	//time.Sleep(time.Second * 3)
 }

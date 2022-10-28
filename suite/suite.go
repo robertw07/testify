@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime/debug"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -229,8 +230,13 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 							}(caseName, curData)
 						}
 						wg.Wait()
-
-						failureRate := (len(targetDataArray) - failCount) / len(targetDataArray) * 100
+						var failureRate float64
+						if len(targetDataArray) != 0 {
+							failureRate = (float64(len(targetDataArray)-failCount) / float64(len(targetDataArray))) * 100
+							failureRate, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", failureRate), 64)
+						} else {
+							failureRate = 0
+						}
 						t.Logf("Total data case count: %d", len(targetDataArray))
 						t.Logf("Failed data case count: %d", failCount)
 						t.Log("Success rate: ", failureRate, "%")
