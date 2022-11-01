@@ -140,7 +140,7 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 
 		// Add by Robert for extend test features
 		dataField := filedFinder.Elem().FieldByName("TestData")
-		fmt.Println(dataField)
+		//fmt.Println(dataField)
 		testData := map[string][]string{}
 		if dataField != (reflect.Value{}) {
 			mapIter := dataField.MapRange()
