@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"testing"
@@ -125,7 +126,7 @@ func (t *DemoSuiteTest) SetupSuite() {
 }
 
 func (t *DemoSuiteTest) Test_0() {
-
+	fmt.Println("*****")
 }
 
 func (t *DemoSuiteTest) Test_1(data string, tt *testing.T) {

@@ -241,6 +241,8 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 						t.Logf("Failed data case count: %d", failCount)
 						t.Log("Success rate: ", failureRate, "%")
 						t.Logf("Parallel count: %d", parallelCount)
+					} else {
+						method.Func.Call([]reflect.Value{reflect.ValueOf(suite)})
 					}
 				} else {
 					method.Func.Call([]reflect.Value{reflect.ValueOf(suite)})
