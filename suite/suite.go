@@ -201,16 +201,7 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 						if parallelCount == 0 {
 							parallelCount = 1
 						}
-						//pool := tunny.NewFunc(parallelCount, func(i interface{}) interface{} {
-						//	t.Run(fmt.Sprintf("%s_%d", curCaseInfo.DataKey, i), func(t *testing.T) {
-						//		method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf(targetDataArray[i.(int)])})
-						//	})
-						//	return nil
-						//})
-						//for i := 0; i < len(targetDataArray); i++ {
-						//	go pool.Process(i)
-						//}
-						//defer pool.Close()
+
 						failCount := 0
 						ch := make(chan struct{}, parallelCount)
 						for i := 0; i < len(targetDataArray); i++ {
@@ -220,6 +211,7 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 							caseName := fmt.Sprintf("%s_%d", curCaseInfo.DataKey, i)
 							go func(caseNameStr, data string) {
 								t.Run(caseNameStr, func(tt *testing.T) {
+									defer recoverAndFailOnPanic(tt)
 									defer wg.Done()
 									method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf(data), reflect.ValueOf(tt)})
 									if tt.Failed() {
@@ -230,6 +222,7 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 							}(caseName, curData)
 						}
 						wg.Wait()
+
 						var failureRate float64
 						if len(targetDataArray) != 0 {
 							failureRate = (float64(len(targetDataArray)-failCount) / float64(len(targetDataArray))) * 100
