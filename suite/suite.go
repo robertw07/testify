@@ -211,13 +211,32 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 							caseName := fmt.Sprintf("%s_%d", curCaseInfo.DataKey, i)
 							go func(caseNameStr, data string) {
 								t.Run(caseNameStr, func(tt *testing.T) {
-									defer recoverAndFailOnPanic(tt)
 									defer wg.Done()
+									defer recoverAndFailOnPanic(tt)
+									defer func() {
+										r := recover()
+
+										if stats != nil {
+											passed := !tt.Failed() && r == nil
+											stats.end(method.Name, passed)
+										}
+
+										if afterTestSuite, ok := suite.(AfterTest); ok {
+											afterTestSuite.AfterTest(suiteName, method.Name)
+										}
+
+										if tearDownTestSuite, ok := suite.(TearDownTestSuite); ok {
+											tearDownTestSuite.TearDownTest()
+										}
+
+										suite.SetT(parentT)
+										<-ch //
+										failOnPanic(tt, r)
+									}()
 									method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf(data), reflect.ValueOf(tt)})
 									if tt.Failed() {
 										failCount++
 									}
-									<-ch
 								})
 							}(caseName, curData)
 						}
@@ -258,6 +277,10 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 	}
 
 	runTests(t, tests)
+}
+
+func getSubDecFromData(data string) {
+
 }
 
 func getCaseInfo(caseInfos []CaseInfo, methodName string) *CaseInfo {

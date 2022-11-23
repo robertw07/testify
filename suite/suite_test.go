@@ -30,7 +30,7 @@ func TestSuiteRequireTwice(t *testing.T) {
 			Name: "TestSuiteRequireTwice",
 			F: func(t *testing.T) {
 				suite := new(SuiteRequireTwice)
-				Run(t, suite)
+				Run(t, suite, nil)
 			},
 		}},
 	)
@@ -105,31 +105,31 @@ func TestSuiteRecoverPanic(t *testing.T) {
 	panickingTests := []testing.InternalTest{
 		{
 			Name: "TestPanicInSetupSuite",
-			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInSetupSuite: true}) },
+			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInSetupSuite: true}, nil) },
 		},
 		{
 			Name: "TestPanicInSetupTest",
-			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInSetupTest: true}) },
+			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInSetupTest: true}, nil) },
 		},
 		{
 			Name: "TestPanicInBeforeTest",
-			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInBeforeTest: true}) },
+			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInBeforeTest: true}, nil) },
 		},
 		{
 			Name: "TestPanicInTest",
-			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInTest: true}) },
+			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInTest: true}, nil) },
 		},
 		{
 			Name: "TestPanicInAfterTest",
-			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInAfterTest: true}) },
+			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInAfterTest: true}, nil) },
 		},
 		{
 			Name: "TestPanicInTearDownTest",
-			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInTearDownTest: true}) },
+			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInTearDownTest: true}, nil) },
 		},
 		{
 			Name: "TestPanicInTearDownSuite",
-			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInTearDownSuite: true}) },
+			F:    func(t *testing.T) { Run(t, &panickingSuite{panicInTearDownSuite: true}, nil) },
 		},
 	}
 
@@ -283,7 +283,7 @@ func (suite *SuiteSkipTester) TearDownSuite() {
 // can run our suite using the Run(*testing.T, TestingSuite) function.
 func TestRunSuite(t *testing.T) {
 	suiteTester := new(SuiteTester)
-	Run(t, suiteTester)
+	Run(t, suiteTester, nil)
 
 	// Normally, the test would end here.  The following are simply
 	// some assertions to ensure that the Run function is working as
@@ -341,7 +341,7 @@ func TestRunSuite(t *testing.T) {
 	assert.Equal(t, suiteTester.NonTestMethodRunCount, 0)
 
 	suiteSkipTester := new(SuiteSkipTester)
-	Run(t, suiteSkipTester)
+	Run(t, suiteSkipTester, nil)
 
 	// The suite was only run once, so the SetupSuite and TearDownSuite
 	// methods should have each been run only once, even though SetupSuite
@@ -373,7 +373,7 @@ func (s *SuiteSetupSkipTester) TearDownSuite() {
 
 func TestSkippingSuiteSetup(t *testing.T) {
 	suiteTester := new(SuiteSetupSkipTester)
-	Run(t, suiteTester)
+	Run(t, suiteTester, nil)
 	assert.False(t, suiteTester.setUp)
 	assert.False(t, suiteTester.toreDown)
 }
@@ -429,7 +429,7 @@ func TestSuiteLogging(t *testing.T) {
 	internalTest := testing.InternalTest{
 		Name: "SomeTest",
 		F: func(subT *testing.T) {
-			Run(subT, suiteLoggingTester)
+			Run(subT, suiteLoggingTester, nil)
 		},
 	}
 	capture.StartCapture()
@@ -460,7 +460,7 @@ func (s *CallOrderSuite) call(method string) {
 }
 
 func TestSuiteCallOrder(t *testing.T) {
-	Run(t, new(CallOrderSuite))
+	Run(t, new(CallOrderSuite), nil)
 }
 func (s *CallOrderSuite) SetupSuite() {
 	s.call("SetupSuite")
@@ -512,7 +512,7 @@ func TestSuiteWithStats(t *testing.T) {
 		{
 			Name: "WithStats",
 			F: func(t *testing.T) {
-				Run(t, suiteWithStats)
+				Run(t, suiteWithStats, nil)
 			},
 		},
 	})
@@ -554,7 +554,7 @@ func TestFailfastSuite(t *testing.T) {
 		[]testing.InternalTest{{
 			Name: "TestFailfastSuite",
 			F: func(t *testing.T) {
-				Run(t, s)
+				Run(t, s, nil)
 			},
 		}},
 	)
