@@ -82,7 +82,7 @@ func failOnPanic(t *testing.T, r interface{}) {
 
 // Run provides suite functionality around golang subtests.  It should be
 // called in place of t.Run(name, func(t *testing.T)) in test suite code.
-// The passed-in func will be executed as a subtest with a fresh instance of t.
+// The passed-in func will be executed as a subtes≈t with a fresh instance of t.
 // Provides compatibility with go test pkg -run TestSuite/TestName/SubTestName.
 func (suite *Suite) Run(name string, subtest func()) bool {
 	oldT := suite.T()
@@ -141,11 +141,13 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 		// Add by Robert for extend test features
 		dataField := filedFinder.Elem().FieldByName("TestData")
 		//fmt.Println(dataField)
-		testData := map[string][]string{}
+		testData := map[string]interface{}{}
 		if dataField != (reflect.Value{}) {
 			mapIter := dataField.MapRange()
 			for mapIter.Next() {
-				testData[mapIter.Key().Interface().(string)] = mapIter.Value().Interface().([]string)
+				if mapIter.Value().Elem().Kind() == reflect.Slice {
+					testData[mapIter.Key().Interface().(string)] = mapIter.Value().Elem().Interface()
+				}
 			}
 		}
 
@@ -195,64 +197,75 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 					}
 					// Concurrent execution of data-driven testing cases
 					if curCaseInfo.DataKey != "" {
-						targetDataArray := testData[curCaseInfo.DataKey]
-						parallelCount := curCaseInfo.ParallelCount
-						var wg sync.WaitGroup
-						if parallelCount == 0 {
-							parallelCount = 1
+						targetData := testData[curCaseInfo.DataKey]
+						if reflect.ValueOf(targetData).Kind() == reflect.Slice {
+
+							itemS := reflect.ValueOf(targetData)
+							var targetDataArray []interface{}
+							for i := 0; i < itemS.Len(); i++ {
+								ele := itemS.Index(i)
+								targetDataArray = append(targetDataArray, ele.Interface())
+							}
+
+							parallelCount := curCaseInfo.ParallelCount
+							var wg sync.WaitGroup
+							if parallelCount == 0 {
+								parallelCount = 1
+							}
+
+							failCount := 0
+							ch := make(chan struct{}, parallelCount)
+							for i := 0; i < len(targetDataArray); i++ {
+								curData := targetDataArray[i]
+								ch <- struct{}{}
+								wg.Add(1)
+								caseName := fmt.Sprintf("%s_%d_%s", curCaseInfo.DataKey, i, buildSubCaseName(curData))
+								go func(caseNameStr string, data interface{}) {
+									t.Run(caseNameStr, func(tt *testing.T) {
+										defer wg.Done()
+										defer recoverAndFailOnPanic(tt)
+										defer func() {
+											r := recover()
+
+											if stats != nil {
+												passed := !tt.Failed() && r == nil
+												stats.end(method.Name, passed)
+											}
+
+											if afterTestSuite, ok := suite.(AfterTest); ok {
+												afterTestSuite.AfterTest(suiteName, method.Name)
+											}
+
+											if tearDownTestSuite, ok := suite.(TearDownTestSuite); ok {
+												tearDownTestSuite.TearDownTest()
+											}
+
+											suite.SetT(parentT)
+											<-ch //
+											failOnPanic(tt, r)
+										}()
+										method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf(data), reflect.ValueOf(tt)})
+										if tt.Failed() {
+											failCount++
+										}
+									})
+								}(caseName, curData)
+							}
+							wg.Wait()
+
+							var failureRate float64
+							if len(targetDataArray) != 0 {
+								failureRate = (float64(len(targetDataArray)-failCount) / float64(len(targetDataArray))) * 100
+								failureRate, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", failureRate), 64)
+							} else {
+								failureRate = 0
+							}
+							t.Logf("Total data case count: %d", len(targetDataArray))
+							t.Logf("Failed data case count: %d", failCount)
+							t.Log("Success rate: ", failureRate, "%")
+							t.Logf("Parallel count: %d", parallelCount)
 						}
 
-						failCount := 0
-						ch := make(chan struct{}, parallelCount)
-						for i := 0; i < len(targetDataArray); i++ {
-							curData := targetDataArray[i]
-							ch <- struct{}{}
-							wg.Add(1)
-							caseName := fmt.Sprintf("%s_%d", curCaseInfo.DataKey, i)
-							go func(caseNameStr, data string) {
-								t.Run(caseNameStr, func(tt *testing.T) {
-									defer wg.Done()
-									defer recoverAndFailOnPanic(tt)
-									defer func() {
-										r := recover()
-
-										if stats != nil {
-											passed := !tt.Failed() && r == nil
-											stats.end(method.Name, passed)
-										}
-
-										if afterTestSuite, ok := suite.(AfterTest); ok {
-											afterTestSuite.AfterTest(suiteName, method.Name)
-										}
-
-										if tearDownTestSuite, ok := suite.(TearDownTestSuite); ok {
-											tearDownTestSuite.TearDownTest()
-										}
-
-										suite.SetT(parentT)
-										<-ch //
-										failOnPanic(tt, r)
-									}()
-									method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf(data), reflect.ValueOf(tt)})
-									if tt.Failed() {
-										failCount++
-									}
-								})
-							}(caseName, curData)
-						}
-						wg.Wait()
-
-						var failureRate float64
-						if len(targetDataArray) != 0 {
-							failureRate = (float64(len(targetDataArray)-failCount) / float64(len(targetDataArray))) * 100
-							failureRate, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", failureRate), 64)
-						} else {
-							failureRate = 0
-						}
-						t.Logf("Total data case count: %d", len(targetDataArray))
-						t.Logf("Failed data case count: %d", failCount)
-						t.Log("Success rate: ", failureRate, "%")
-						t.Logf("Parallel count: %d", parallelCount)
 					} else {
 						method.Func.Call([]reflect.Value{reflect.ValueOf(suite)})
 					}
@@ -279,8 +292,41 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 	runTests(t, tests)
 }
 
-func getSubDecFromData(data string) {
-
+func buildSubCaseName(data interface{}) string {
+	caseName := ""
+	dataValue := reflect.ValueOf(data)
+	switch dataValue.Kind() {
+	case reflect.String:
+		str := data.(string)
+		len0 := len(str)
+		if len0 < 50 {
+			caseName = str[0 : len(str)-1]
+		} else {
+			caseName = str[0:49] + "..."
+		}
+		break
+	case reflect.Struct:
+		fName := dataValue.FieldByName("CaseDesc")
+		if fName == (reflect.Value{}) {
+			fName = dataValue.FieldByName("Name")
+		}
+		if fName == (reflect.Value{}) {
+			fName = dataValue.FieldByName("CaseName")
+		}
+		// for testing
+		//if fName == (reflect.Value{}) {
+		//	fName = dataValue.FieldByName("SuiteName")
+		//}
+		caseName = fName.String()
+		break
+	case reflect.Int, reflect.Int16, reflect.Int64:
+		caseName = fmt.Sprintf("%d", dataValue.Int())
+		break
+	case reflect.Float32, reflect.Float64:
+		caseName = fmt.Sprintf("%f", dataValue.Float())
+		break
+	}
+	return caseName
 }
 
 func getCaseInfo(caseInfos []CaseInfo, methodName string) *CaseInfo {
