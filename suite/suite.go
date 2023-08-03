@@ -159,6 +159,10 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 				defer recoverAndFailOnPanic(t)
 				defer func() {
 					r := recover()
+					if r != nil {
+						t.Log("panic err:", r)
+						t.Fail()
+					}
 
 					if stats != nil {
 						passed := !t.Failed() && r == nil
@@ -194,6 +198,7 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 				if curCaseInfo != nil {
 					if curCaseInfo.IsSkip {
 						t.Skipf("Current test method Tags:%s", curCaseInfo.TagStr)
+						return
 					}
 					// Concurrent execution of data-driven testing cases
 					if curCaseInfo.DataKey != "" {
@@ -226,7 +231,13 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 										defer recoverAndFailOnPanic(tt)
 										defer func() {
 											r := recover()
-
+											if r != nil {
+												tt.Log("panic err:", r)
+												tt.Fail()
+											}
+											if tt.Failed() || r != nil {
+												failCount++
+											}
 											if stats != nil {
 												passed := !tt.Failed() && r == nil
 												stats.end(method.Name, passed)
@@ -239,15 +250,12 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 											if tearDownTestSuite, ok := suite.(TearDownTestSuite); ok {
 												tearDownTestSuite.TearDownTest()
 											}
-
 											suite.SetT(parentT)
-											<-ch //
 											failOnPanic(tt, r)
+											<-ch //
 										}()
 										method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf(data), reflect.ValueOf(tt)})
-										if tt.Failed() {
-											failCount++
-										}
+
 									})
 								}(caseName, curData)
 							}
