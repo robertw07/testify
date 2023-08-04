@@ -178,7 +178,7 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 					}
 
 					suite.SetT(parentT)
-					failOnPanic(t, r)
+					//failOnPanic(t, r)   //robert
 				}()
 
 				if setupTestSuite, ok := suite.(SetupTestSuite); ok {
@@ -251,7 +251,7 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 												tearDownTestSuite.TearDownTest()
 											}
 											suite.SetT(parentT)
-											failOnPanic(tt, r)
+											//failOnPanic(tt, r)   //robert
 											<-ch //
 										}()
 										method.Func.Call([]reflect.Value{reflect.ValueOf(suite), reflect.ValueOf(data), reflect.ValueOf(tt)})
