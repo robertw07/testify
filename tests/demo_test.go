@@ -128,3 +128,8 @@ func (t *DemoSuiteTest) Test_5(data int, tt *testing.T) {
 		assert.True(tt, false, "")
 	}
 }
+
+func (t *DemoSuiteTest) Test_6(data int, tt *testing.T) {
+	arry := []string{"1"}
+	fmt.Println(arry[2])
+}

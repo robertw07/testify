@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"sync"
@@ -160,8 +161,9 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 				defer func() {
 					r := recover()
 					if r != nil {
-						t.Log("panic err:", r)
-						t.Fail()
+						var buf [1024]byte
+						n := runtime.Stack(buf[:], true)
+						t.Errorf("panic err : \n %s\n%s\n", r, buf[:n])
 					}
 
 					if stats != nil {
@@ -232,8 +234,9 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 										defer func() {
 											r := recover()
 											if r != nil {
-												tt.Log("panic err:", r)
-												tt.Fail()
+												var buf [1024]byte
+												n := runtime.Stack(buf[:], true)
+												t.Errorf("panic err : \n %s\n%s\n", r, buf[:n])
 											}
 											if tt.Failed() || r != nil {
 												failCount++
@@ -381,6 +384,13 @@ func runTests(t testing.TB, tests []testing.InternalTest) {
 	for _, test := range tests {
 		r.Run(test.Name, test.F)
 	}
+}
+func printStack() {
+	// 获取调用栈信息
+	var buf [1024]byte
+	n := runtime.Stack(buf[:], true)
+	// 打印调用栈信息
+	fmt.Printf("=== STACK TRACE ===\n%s\n", buf[:n])
 }
 
 type runner interface {
