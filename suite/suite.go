@@ -278,7 +278,12 @@ func Run(t *testing.T, suite TestingSuite, caseInfos []CaseInfo) {
 						}
 
 					} else {
-						method.Func.Call([]reflect.Value{reflect.ValueOf(suite)})
+						for ; curCaseInfo.RetryCount >= 0; curCaseInfo.RetryCount-- {
+							method.Func.Call([]reflect.Value{reflect.ValueOf(suite)})
+							if !t.Failed() {
+								break
+							}
+						}
 					}
 				} else {
 					method.Func.Call([]reflect.Value{reflect.ValueOf(suite)})

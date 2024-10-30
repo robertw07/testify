@@ -21,7 +21,7 @@ func TestDemo(t *testing.T) {
 		},
 		{
 			MethodName: "Test_0",
-			IsSkip:     true,
+			RetryCount: 3,
 		},
 		{
 			MethodName:    "Test_2",
@@ -74,7 +74,9 @@ func (t *DemoSuiteTest) SetupSuite() {
 }
 
 func (t *DemoSuiteTest) Test_0() {
+	assert.True(t.T(), true)
 	fmt.Println("*****")
+	//assert.True(t.T(), false)
 }
 
 func (t *DemoSuiteTest) Test_1(data string, tt *testing.T) {
@@ -129,7 +131,7 @@ func (t *DemoSuiteTest) Test_5(data int, tt *testing.T) {
 	}
 }
 
-func (t *DemoSuiteTest) Test_6(data int, tt *testing.T) {
+func (t *DemoSuiteTest) Test_6(tt *testing.T) {
 	arry := []string{"1"}
 	fmt.Println(arry[2])
 }
